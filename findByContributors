@@ -1,0 +1,32 @@
+#!/bin/bash
+
+read -p "Which contributors do you want to see the code for? (E.g.: Orlando\ Canchola\ Jimenez Pablo\ Ramirez\ Martinez) " -a contributors
+
+readarray -d '' files < <(find . -regextype egrep -regex '.+\.(java|js|ts|py)$' -print0)
+
+for file in "${files[@]}"; do
+	git blame "$file" >> gitBlames.txt
+
+	for contributor in "${contributors[@]}"; do
+
+		grep --max-count=1 -Pi "$contributor" gitBlames.txt &> /dev/null
+
+		if [[ "$?" -eq 0 ]]; then
+			echo "$file" >> "gitBlames${contributor}.txt"
+
+			# Colorize the output
+			red=$(($RANDOM % 255))
+			green=$(($RANDOM % 255))
+			blue=$(($RANDOM % 255))
+
+								# Remove the name of the contributor
+			grep -Pi "$contributor" gitBlames.txt | perl -p -e 's/(?<=^[A-Za-z0-9\^]{8} \().+?(?=\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})//m' | perl -p -e "s/^([A-Za-z0-9\^]{8})/\x{001B}[38;2;${red};${green};${blue}m\1/" | perl -p -e 's/(\([^)]+\) )/\1\x{001B}[m/' >> "gitBlames${contributor}.txt"
+
+			# I decided to use pipes because I use more memory RAM instead of the hard drive, therefore it is faster
+		fi
+	done
+	rm gitBlames.txt
+done
+
+
+less -R gitBlames*.txt
